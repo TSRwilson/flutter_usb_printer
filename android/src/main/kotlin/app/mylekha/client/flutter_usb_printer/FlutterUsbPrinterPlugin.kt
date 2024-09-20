@@ -44,7 +44,9 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           connect(vendorId!!, productId!!, result)
         }
         "close" -> {
-          close(result)
+           val vendorId = call.argument<Int>("vendorId")
+    val productId = call.argument<Int>("productId")
+    close(vendorId!!, productId!!, result)
         }
         "printText" -> {
           val text = call.argument<String>("text")
@@ -98,9 +100,13 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
-  private fun close(result: Result) {
-    adapter!!.closeConnectionIfExists()
-    result.success(true)
+  private fun close(vendorId: Int, productId: Int, result: Result) {
+     if (vendorId != null && productId != null) {
+        adapter!!.closeConnectionIfExists(vendorId, productId)
+        result.success(true)
+    } else {
+        result.error("INVALID_ARGUMENT", "VendorId and ProductId cannot be null", null)
+    }
   }
 
   private fun printText(text : String?, result  :Result) {

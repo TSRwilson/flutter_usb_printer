@@ -37,8 +37,12 @@ class FlutterUsbPrinter {
 
   /// [close]
   /// close the connection after print with usb printer
-  Future<bool?> close() async {
-    final bool? result = await _channel.invokeMethod('close');
+  Future<bool?> close(int vendorId, int productId) async {
+      Map<String, dynamic> params = {
+      "vendorId": vendorId,
+      "productId": productId
+    };
+    final bool? result = await _channel.invokeMethod('close', params);
     return result;
   }
 

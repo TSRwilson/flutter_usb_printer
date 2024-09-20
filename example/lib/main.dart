@@ -4,17 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 
-void main() => runApp(new MyApp());
+void main() => runApp(MyApp());
 
 class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => new _MyAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  List<Map<String, dynamic>> devices = [];
+  List<Map<String, dynamic>> devices = [];                                
   FlutterUsbPrinter flutterUsbPrinter = FlutterUsbPrinter();
   bool connected = false;
+  int? connectedVendorId;
+  int? connectedProductId;
 
   @override
   initState() {
@@ -22,6 +24,7 @@ class _MyAppState extends State<MyApp> {
     _getDevicelist();
   }
 
+  // Fetch the list of USB devices
   _getDevicelist() async {
     List<Map<String, dynamic>> results = [];
     results = await FlutterUsbPrinter.getUSBDeviceList();
@@ -32,73 +35,93 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  // Connect to a specific USB device
   _connect(int vendorId, int productId) async {
     bool? returned = false;
     try {
       returned = await flutterUsbPrinter.connect(vendorId, productId);
     } on PlatformException {
-      //response = 'Failed to get platform version.';
+      print('Failed to connect to USB device.');
     }
     if (returned!) {
       setState(() {
         connected = true;
+        connectedVendorId = vendorId;
+        connectedProductId = productId;
       });
     }
   }
 
+  // Close the connection to the specific USB device
+  _closeConnection() async {
+    if (connectedVendorId != null && connectedProductId != null) {
+      try {
+        await flutterUsbPrinter.close(connectedVendorId!, connectedProductId!);
+        setState(() {
+          //connected = false;
+          connectedVendorId = null;
+          connectedProductId = null;
+        });
+        print('Connection closed');
+      } on PlatformException {
+        print('Failed to close the connection.');
+      }
+    }
+  }
+
+  // Print data to the connected USB printer
   _print() async {
     try {
       var data = Uint8List.fromList(
           utf8.encode(" Hello world Testing ESC POS printer..."));
       await flutterUsbPrinter.write(data);
-      // await FlutterUsbPrinter.printRawData("text");
-      // await FlutterUsbPrinter.printText("Testing ESC POS printer...");
     } on PlatformException {
-      //response = 'Failed to get platform version.';
+      print('Failed to print.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return new MaterialApp(
-      home: new Scaffold(
-        appBar: new AppBar(
-          title: new Text('USB PRINTER'),
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('USB PRINTER'),
           actions: <Widget>[
-            new IconButton(
-                icon: new Icon(Icons.refresh),
-                onPressed: () => _getDevicelist()),
+            IconButton(icon: Icon(Icons.refresh), onPressed: _getDevicelist),
             connected == true
-                ? new IconButton(
-                    icon: new Icon(Icons.print),
-                    onPressed: () {
-                      _print();
-                    })
-                : new Container(),
+                ? IconButton(
+                    icon: Icon(Icons.print),
+                    onPressed: _print,
+                  )
+                : Container(),
+            connected == true
+                ? IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: _closeConnection,
+                  )
+                : Container(),
           ],
         ),
         body: devices.length > 0
-            ? new ListView(
+            ? ListView(
                 scrollDirection: Axis.vertical,
                 children: _buildList(devices),
               )
-            : null,
+            : Center(child: Text('No USB devices found')),
       ),
     );
   }
 
   List<Widget> _buildList(List<Map<String, dynamic>> devices) {
     return devices
-        .map((device) => new ListTile(
+        .map((device) => ListTile(
               onTap: () {
                 _connect(int.parse(device['vendorId']),
                     int.parse(device['productId']));
               },
-              leading: new Icon(Icons.usb),
-              title: new Text(
-                  device['manufacturer'] + " " + device['productName']),
-              subtitle:
-                  new Text(device['vendorId'] + " " + device['productId']),
+              leading: Icon(Icons.usb),
+              title: Text(device['manufacturer'] + " " + device['productName']),
+              subtitle: Text(device['vendorId'] + " " + device['productId']),
             ))
         .toList();
   }

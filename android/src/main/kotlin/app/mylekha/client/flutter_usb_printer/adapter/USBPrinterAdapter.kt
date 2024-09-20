@@ -65,7 +65,8 @@ class USBPrinterAdapter {
                 if (mUsbDevice != null) {
                     Toast.makeText(context, "USB device has been turned off", Toast.LENGTH_LONG)
                         .show()
-                    closeConnectionIfExists()
+                        closeConnectionIfExists(mUsbDevice!!.vendorId, mUsbDevice!!.productId)
+
                 }
             }
         }
@@ -88,16 +89,25 @@ class USBPrinterAdapter {
     }
 
 
-    fun closeConnectionIfExists() {
-        if (mUsbDeviceConnection != null) {
+   fun closeConnectionIfExists(vendorId: Int, productId: Int) {
+    if (mUsbDeviceConnection != null && mUsbDevice != null) {
+        // Check if the connected device matches the provided vendorId and productId
+        if (mUsbDevice!!.vendorId == vendorId && mUsbDevice!!.productId == productId) {
             mUsbDeviceConnection!!.releaseInterface(mUsbInterface)
             mUsbDeviceConnection!!.close()
             mUsbInterface = null
             mEndPoint = null
             mUsbDeviceConnection = null
-            mUsbDevice=null
+            mUsbDevice = null
+            Log.v(LOG_TAG, "Closed connection for vendorId: $vendorId, productId: $productId")
+        } else {
+            Log.v(LOG_TAG, "No matching device found for vendorId: $vendorId, productId: $productId")
         }
+    } else {
+        Log.v(LOG_TAG, "No USB connection exists to close")
     }
+}
+
 
     fun getDeviceList(): List<UsbDevice> {
         if (mUSBManager == null) {
@@ -113,7 +123,7 @@ class USBPrinterAdapter {
 
     fun selectDevice(vendorId: Int, productId: Int): Boolean {
         if (mUsbDevice == null || mUsbDevice!!.vendorId != vendorId || mUsbDevice!!.productId != productId) {
-            closeConnectionIfExists()
+         //   closeConnectionIfExists(mUsbDevice!!.vendorId, mUsbDevice!!.productId)
             val usbDevices = getDeviceList()
             for (usbDevice in usbDevices) {
                 if (usbDevice.vendorId == vendorId && usbDevice.productId == productId) {
@@ -121,7 +131,8 @@ class USBPrinterAdapter {
                         LOG_TAG,
                         "Request for device: vendor_id: " + usbDevice.vendorId + ", product_id: " + usbDevice.productId
                     )
-                    closeConnectionIfExists()
+                                        //    closeConnectionIfExists(usbDevice.vendorId, usbDevice.productId)
+
                     mUSBManager!!.requestPermission(usbDevice, mPermissionIntent)
                     return true
                 }

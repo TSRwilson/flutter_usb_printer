@@ -1,9 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="app.mylekha.client.flutter_usb_printer_example">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
    <application
         android:label="flutter_usb_printer_example"
         android:icon="@mipmap/ic_launcher">
         <activity
+        android:exported="true"
             android:name=".MainActivity"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
