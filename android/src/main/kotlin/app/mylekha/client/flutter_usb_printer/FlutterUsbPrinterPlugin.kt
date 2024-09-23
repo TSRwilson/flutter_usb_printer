@@ -57,8 +57,10 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
           printRawText(raw, result)
         }
         "write" -> {
+          val vendorId = call.argument<Int>("vendorId")
+          val productId = call.argument<Int>("productId")
           val data = call.argument<ByteArray>("data")
-          write(data, result)
+          write(vendorId!!, productId!!,data, result)
         }
         else -> {
           result.notImplemented()
@@ -119,8 +121,8 @@ class FlutterUsbPrinterPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     result.success(true)
   }
 
-  private fun write(bytes: ByteArray?, result: Result) {
-    bytes?.let { adapter!!.write(it) }
+  private fun write(vendorId: Int, productId: Int, bytes: ByteArray?, result: Result) {
+    bytes?.let { adapter!!.write(bytes,vendorId, productId,) }
     result.success(true)
   }
 

@@ -12,7 +12,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  List<Map<String, dynamic>> devices = [];                                
+  List<Map<String, dynamic>> devices = [];
   FlutterUsbPrinter flutterUsbPrinter = FlutterUsbPrinter();
   bool connected = false;
   int? connectedVendorId;
@@ -70,11 +70,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   // Print data to the connected USB printer
-  _print() async {
+  _print(vendorId, productId) async {
     try {
       var data = Uint8List.fromList(
           utf8.encode(" Hello world Testing ESC POS printer..."));
-      await flutterUsbPrinter.write(data);
+      await flutterUsbPrinter.write(vendorId, productId, data);
     } on PlatformException {
       print('Failed to print.');
     }
@@ -88,12 +88,6 @@ class _MyAppState extends State<MyApp> {
           title: Text('USB PRINTER'),
           actions: <Widget>[
             IconButton(icon: Icon(Icons.refresh), onPressed: _getDevicelist),
-            connected == true
-                ? IconButton(
-                    icon: Icon(Icons.print),
-                    onPressed: _print,
-                  )
-                : Container(),
             connected == true
                 ? IconButton(
                     icon: Icon(Icons.close),
@@ -122,6 +116,12 @@ class _MyAppState extends State<MyApp> {
               leading: Icon(Icons.usb),
               title: Text(device['manufacturer'] + " " + device['productName']),
               subtitle: Text(device['vendorId'] + " " + device['productId']),
+              trailing: IconButton(
+                  onPressed: () {
+                    _print(int.parse(device['vendorId']),
+                        int.parse(device['productId']));
+                  },
+                  icon: Icon(Icons.print)),
             ))
         .toList();
   }
