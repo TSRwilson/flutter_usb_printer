@@ -239,41 +239,78 @@ fun closeAllConnections() {
         }
     }
 
-fun write(bytes: ByteArray, vendorId: Int, productId: Int): Boolean {
-    Log.v(LOG_TAG, "Attempting to write to device with vendorId: $vendorId, productId: $productId")
+    fun write(bytes: ByteArray, vendorId: Int, productId: Int): Boolean {
+        Log.v(LOG_TAG, "Attempting to write to device with vendorId: $vendorId, productId: $productId")
 
-    // Step 1: Close any existing open connection
-    closeAllConnections()
+        // Step 1: Close any existing open connection
+        closeAllConnections()
 
-    // Step 2: Select the device based on the provided vendorId and productId
-    val isDeviceSelected = selectDevice(vendorId, productId)
+        // Step 2: Select the device based on the provided vendorId and productId
+        val isDeviceSelected = selectDevice(vendorId, productId)
 
-    return if (isDeviceSelected) {
-        Log.v(LOG_TAG, "Device selected: vendorId: $vendorId, productId: $productId")
-        
-        // Step 3: Open the connection to the selected device
+        return if (isDeviceSelected) {
+            Log.v(LOG_TAG, "Device selected: vendorId: $vendorId, productId: $productId")
+
+            // Step 3: Check if permission is already granted, if not request it
+            if (mUsbDevice != null && mUSBManager!!.hasPermission(mUsbDevice)) {
+                // Permission already granted, proceed with connection and write
+                Log.v(LOG_TAG, "Permission already granted for device")
+                return handleWriteAfterPermissionGranted(bytes)
+            } else {
+                // Request permission and wait for result
+                Log.v(LOG_TAG, "Requesting permission for device: vendorId: $vendorId, productId: $productId")
+                mUSBManager!!.requestPermission(mUsbDevice, mPermissionIntent)
+
+                // Wait for permission result
+                val permissionGranted = waitForPermissionResult()
+                return if (permissionGranted) {
+                    Log.v(LOG_TAG, "Permission granted, proceeding with write operation")
+                    handleWriteAfterPermissionGranted(bytes)
+                } else {
+                    Log.v(LOG_TAG, "Permission denied, cannot proceed with write operation")
+                    false
+                }
+            }
+        } else {
+            Log.v(LOG_TAG, "No device found with vendorId: $vendorId, productId: $productId")
+            return false
+        }
+    }
+    private fun handleWriteAfterPermissionGranted(bytes: ByteArray): Boolean {
         val isConnected = openConnection()
 
-        if (isConnected) {
+        return if (isConnected) {
             Log.v(LOG_TAG, "Connected to device. Starting to send data...")
-            
-            // Step 4: Perform the bulk transfer to send the data
+
+            // Perform the bulk transfer to send the data
             Thread {
                 val transferResult = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, bytes.size, 100000)
                 Log.i(LOG_TAG, "Data transfer result: $transferResult")
-                
-                // Step 5: Close the connection after transfer
-                closeConnectionIfExists(vendorId, productId)
+
+                // Close the connection after transfer
+                closeConnectionIfExists(mUsbDevice!!.vendorId, mUsbDevice!!.productId)
             }.start()
             true
         } else {
             Log.v(LOG_TAG, "Failed to connect to device")
             false
         }
-    } else {
-        Log.v(LOG_TAG, "No device found with vendorId: $vendorId, productId: $productId")
-        false
     }
-}
+    private fun waitForPermissionResult(): Boolean {
+        var permissionGranted = false
+        val timeout = System.currentTimeMillis() + 5000 // 5 seconds timeout
+
+        // Simulate waiting for permission to be granted
+        while (System.currentTimeMillis() < timeout) {
+            if (mUsbDevice != null && mUSBManager!!.hasPermission(mUsbDevice)) {
+                permissionGranted = true
+                break
+            }
+            Thread.sleep(100) // Sleep briefly before checking again
+        }
+
+        return permissionGranted
+    }
+
 
 }
