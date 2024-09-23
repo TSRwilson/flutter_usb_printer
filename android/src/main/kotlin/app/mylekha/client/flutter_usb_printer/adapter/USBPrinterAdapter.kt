@@ -108,6 +108,29 @@ class USBPrinterAdapter {
     }
 }
 
+fun closeAllConnections() {
+    if (mUsbDeviceConnection != null) {
+        Log.v(LOG_TAG, "Closing all existing USB connections.")
+        
+        // Release the interface and close the connection
+        if (mUsbInterface != null) {
+            mUsbDeviceConnection!!.releaseInterface(mUsbInterface)
+        }
+        mUsbDeviceConnection!!.close()
+
+        // Nullify the connection-related objects
+        mUsbInterface = null
+        mEndPoint = null
+        mUsbDeviceConnection = null
+        mUsbDevice = null
+
+        Log.v(LOG_TAG, "All connections closed successfully.")
+    } else {
+        Log.v(LOG_TAG, "No USB connection exists to close.")
+    }
+}
+
+
 
     fun getDeviceList(): List<UsbDevice> {
         if (mUSBManager == null) {
@@ -216,19 +239,41 @@ class USBPrinterAdapter {
         }
     }
 
-    fun write(bytes: ByteArray): Boolean {
-        Log.v(LOG_TAG, "start to print raw data $bytes")
+fun write(bytes: ByteArray, vendorId: Int, productId: Int): Boolean {
+    Log.v(LOG_TAG, "Attempting to write to device with vendorId: $vendorId, productId: $productId")
+
+    // Step 1: Close any existing open connection
+    closeAllConnections()
+
+    // Step 2: Select the device based on the provided vendorId and productId
+    val isDeviceSelected = selectDevice(vendorId, productId)
+
+    return if (isDeviceSelected) {
+        Log.v(LOG_TAG, "Device selected: vendorId: $vendorId, productId: $productId")
+        
+        // Step 3: Open the connection to the selected device
         val isConnected = openConnection()
-        return if (isConnected) {
-            Log.v(LOG_TAG, "Connected to device")
+
+        if (isConnected) {
+            Log.v(LOG_TAG, "Connected to device. Starting to send data...")
+            
+            // Step 4: Perform the bulk transfer to send the data
             Thread {
-                val b = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, bytes.size, 100000)
-                Log.i(LOG_TAG, "Return Status: $b")
+                val transferResult = mUsbDeviceConnection!!.bulkTransfer(mEndPoint, bytes, bytes.size, 100000)
+                Log.i(LOG_TAG, "Data transfer result: $transferResult")
+                
+                // Step 5: Close the connection after transfer
+                closeConnectionIfExists(vendorId, productId)
             }.start()
             true
         } else {
-            Log.v(LOG_TAG, "failed to connected to device")
+            Log.v(LOG_TAG, "Failed to connect to device")
             false
         }
+    } else {
+        Log.v(LOG_TAG, "No device found with vendorId: $vendorId, productId: $productId")
+        false
     }
+}
+
 }
