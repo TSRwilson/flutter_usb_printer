@@ -259,7 +259,7 @@ fun closeAllConnections() {
             } else {
                 // Request permission and wait for result
                 Log.v(LOG_TAG, "Requesting permission for device: vendorId: $vendorId, productId: $productId")
-                mUSBManager!!.requestPermission(mUsbDevice, mPermissionIntent)
+               // mUSBManager!!.requestPermission(mUsbDevice, mPermissionIntent)
 
                 // Wait for permission result
                 val permissionGranted = waitForPermissionResult()
